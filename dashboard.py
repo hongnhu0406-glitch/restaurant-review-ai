@@ -5,10 +5,7 @@ import plotly.graph_objects as go
 import streamlit as st
 from dashboard_stats import (ASPECT_NAMES, SENTIMENT_NAMES, aspect_table, overall,
                              strengths_weaknesses, validate)
-try:
-    from duc_adapter import compare_with_backend, completed_batches, parse_dashboard, read_json
-except ImportError:  # file đang tên adapter.py
-    from adapter import compare_with_backend, completed_batches, parse_dashboard, read_json
+from adapter import compare_with_backend, completed_batches, parse_dashboard, read_json
 
 st.set_page_config(page_title="Restaurant Review AI - Dashboard", page_icon="🍽️", layout="wide",
                    initial_sidebar_state="collapsed")
@@ -127,7 +124,7 @@ div[data-baseweb="tab-highlight"] {background:var(--gold) !important;height:3px 
 COLORS = {"Tích cực": "#68765D", "Tiêu cực": "#A65D50", "Trung lập": "#D4BE96"}
 BADGE = {"Tích cực": "pos", "Tiêu cực": "neg", "Trung lập": "neu"}
 BASE = os.path.dirname(os.path.abspath(__file__))
-DUC_DIR = os.path.join(BASE, "Dữ liệu")
+DIR = os.path.join(BASE, "Dữ liệu")
 
 
 def style_fig(fig, height):
@@ -164,7 +161,7 @@ def load_json(src):
 
 
 def pick_json(name):
-    path = os.path.join(DUC_DIR, name)
+    path = os.path.join(DIR, name)
     return path if os.path.exists(path) else st.file_uploader(f"Tải {name}", type=["json"], key=name)
 
 
@@ -226,7 +223,7 @@ tbl, ov = aspect_table(df), overall(df)
 shown = tbl if show_empty else tbl[tbl["Lượt đề cập"] > 0]
 diff = compare_with_backend(tbl, backend_stats)
 if diff:
-    st.warning("Số liệu dashboard lệch với thống kê của backend, cần hỏi lại Đức: " + "; ".join(diff[:5]))
+    st.warning("Số liệu dashboard lệch với thống kê của backend, cần kiểm tra lại: " + "; ".join(diff[:5]))
 
 top, low = strengths_weaknesses(tbl, int(min_m))
 
