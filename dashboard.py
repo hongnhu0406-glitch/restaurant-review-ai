@@ -1,4 +1,3 @@
-# Dashboard tổng hợp kết quả phân tích ABSA - giao diện Long Triều (ivory, burgundy, gold)
 import html
 import os
 import pandas as pd
