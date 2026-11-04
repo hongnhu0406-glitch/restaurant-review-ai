@@ -1,18 +1,16 @@
 import html
-import os
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from dashboard_stats import (ASPECT_NAMES, SENTIMENT_NAMES, aspect_table, overall,
                              strengths_weaknesses, validate)
-from adapter import compare_with_backend, completed_batches, parse_dashboard, read_json
+from adapter import (API_BASE_URL, BackendError, compare_with_backend, completed_batches, fetch_batches,
+                     fetch_dashboard, fetch_export, parse_dashboard, status_counts)
 
 st.set_page_config(page_title="Restaurant Review AI - Dashboard", page_icon="🍽️", layout="wide",
                    initial_sidebar_state="collapsed")
 
-# =========================================================
 # 1. DESIGN SYSTEM
-# =========================================================
 st.markdown("""
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -123,8 +121,6 @@ div[data-baseweb="tab-highlight"] {background:var(--gold) !important;height:3px 
 
 COLORS = {"Tích cực": "#68765D", "Tiêu cực": "#A65D50", "Trung lập": "#D4BE96"}
 BADGE = {"Tích cực": "pos", "Tiêu cực": "neg", "Trung lập": "neu"}
-BASE = os.path.dirname(os.path.abspath(__file__))
-DIR = os.path.join(BASE, "Dữ liệu")
 
 
 def style_fig(fig, height):
@@ -155,19 +151,26 @@ def width(v):
     return 0 if pd.isna(v) else max(0, min(100, float(v)))
 
 
-@st.cache_data
-def load_json(src):
-    return read_json(src)
+@st.cache_data(ttl=30, show_spinner=False)
+def load_batches():
+    return fetch_batches()
 
 
-def pick_json(name):
-    path = os.path.join(DIR, name)
-    return path if os.path.exists(path) else st.file_uploader(f"Tải {name}", type=["json"], key=name)
+@st.cache_data(ttl=300, show_spinner=False)
+def load_dashboard(batch_id):
+    return fetch_dashboard(batch_id)
 
 
-# =========================================================
+@st.cache_data(ttl=300, show_spinner=False)
+def load_export(batch_id):
+    return fetch_export(batch_id)
+
+
+def reload_data():
+    st.cache_data.clear()
+    st.rerun()
+
 # 2. HEADER
-# =========================================================
 st.markdown("""
 <div class="topline"><span class="brand-mark">Restaurant Review AI</span><span>Bảng thống kê</span></div>
 <section class="hero">
@@ -178,20 +181,50 @@ st.markdown("""
 </section>
 """, unsafe_allow_html=True)
 
-# =========================================================
 # 3. DỮ LIỆU VÀ BỘ LỌC
-# =========================================================
 with st.container(border=True):
-    heading("Chọn lần phân tích", "Chỉ hiển thị các batch đã hoàn tất (Completed).")
+    heading("Chọn lần phân tích", "Dữ liệu lấy trực tiếp từ backend. Chỉ hiển thị các batch đã hoàn tất (Completed).")
     try:
-        fb, fd = pick_json("batches.json"), pick_json("dashboard.json")
-        if fb is None or fd is None:
-            st.info("Chưa có dữ liệu phân tích. Hãy đặt batches.json và dashboard.json vào thư mục Dữ liệu hoặc tải lên.")
-            st.stop()
-        bt = completed_batches(load_json(fb))
-        binfo, raw, backend_stats = parse_dashboard(load_json(fd))
-    except Exception as e:
-        st.error(f"Không đọc được dữ liệu: {e}")
+        with st.spinner("Đang tải danh sách batch từ backend..."):
+            all_batches = load_batches()
+    except BackendError as e:
+        st.error(str(e))
+        st.caption(f"Địa chỉ API đang dùng: {API_BASE_URL}")
+        if st.button("Thử kết nối lại"):
+            reload_data()
+        st.stop()
+
+    bt = completed_batches(all_batches)
+    counts = status_counts(all_batches)
+    if bt.empty:
+        st.warning("Chưa có batch nào ở trạng thái Completed. Hãy phân tích một bình luận hoặc tải file CSV ở trang chính.")
+        if st.button("Tải lại danh sách"):
+            reload_data()
+        st.stop()
+
+    batches = list(bt["batch_id"])
+    labels = {r.batch_id: f"{r.batch_id} · {r.created_at} · {r.total_reviews} bình luận" for r in bt.itertuples()}
+    f1c, f2c, f3c, f4c = st.columns([2, 1.2, 1.2, .8], gap="large")
+    batch = f1c.selectbox("Lần phân tích (batch)", batches, format_func=lambda b: labels.get(b, b))
+    min_m = f2c.number_input("Số lượt đề cập tối thiểu để xếp hạng", 1, 100, 10)
+    show_empty = f3c.checkbox("Hiện cả khía cạnh chưa được đề cập", value=False)
+    f4c.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+    if f4c.button("Tải lại dữ liệu", use_container_width=True):
+        reload_data()
+
+    note = []
+    if counts.get("Processing"):
+        note.append(f"{counts['Processing']} batch đang xử lý")
+    if counts.get("Failed"):
+        note.append(f"{counts['Failed']} batch thất bại")
+    if note:
+        st.caption(" · ".join(note) + " (không đưa vào thống kê).")
+
+    try:
+        with st.spinner("Đang tải thống kê của batch..."):
+            binfo, raw, backend_stats = parse_dashboard(load_dashboard(batch))
+    except BackendError as e:
+        st.error(str(e))
         st.stop()
 
     errs = validate(raw)
@@ -202,17 +235,6 @@ with st.container(border=True):
         st.stop()
     raw["Sentiment"] = pd.to_numeric(raw["Sentiment"]).astype(int)
 
-    batches = list(bt["batch_id"]) if not bt.empty else []
-    if not batches:
-        st.warning("Chưa có batch nào ở trạng thái Completed.")
-        st.stop()
-    labels = {r.batch_id: f"{r.batch_id} · {r.created_at} · {r.total_reviews} bình luận" for r in bt.itertuples()}
-    default = batches.index(binfo["batch_id"]) if binfo["batch_id"] in batches else 0
-    f1c, f2c, f3c = st.columns([2, 1.2, 1.2], gap="large")
-    batch = f1c.selectbox("Lần phân tích (batch)", batches, index=default, format_func=lambda b: labels.get(b, b))
-    min_m = f2c.number_input("Số lượt đề cập tối thiểu để xếp hạng", 1, 100, 10)
-    show_empty = f3c.checkbox("Hiện cả khía cạnh chưa được đề cập", value=False)
-
 df = raw[raw["batch_id"] == batch]
 if df.empty:  # batch có trong danh sách nhưng file kết quả chưa có
     have = ", ".join(dict.fromkeys(raw["batch_id"]))
@@ -221,15 +243,13 @@ if df.empty:  # batch có trong danh sách nhưng file kết quả chưa có
 
 tbl, ov = aspect_table(df), overall(df)
 shown = tbl if show_empty else tbl[tbl["Lượt đề cập"] > 0]
-diff = compare_with_backend(tbl, backend_stats)
+diff = compare_with_backend(tbl, ov, backend_stats)
 if diff:
-    st.warning("Số liệu dashboard lệch với thống kê của backend, cần kiểm tra lại: " + "; ".join(diff[:5]))
+    st.warning("Số liệu dashboard lệch với thống kê của backend, cần kiểm tra lại với backend: " + "; ".join(diff[:5]))
 
 top, low = strengths_weaknesses(tbl, int(min_m))
 
-# =========================================================
 # 4. ĐIỂM NỔI BẬT + KPI
-# =========================================================
 st.write("")
 if not top.empty and not low.empty:
     t, l = top.iloc[0], low.iloc[0]
@@ -248,9 +268,7 @@ kpi(k3, "Tỷ lệ tích cực chung", f"{ov['pos_rate']}%" if ov["pos_rate"] is
 kpi(k4, "Khía cạnh được nhắc tới", f"{int((tbl['Lượt đề cập'] > 0).sum())}/12", "Trên tổng 12 khía cạnh")
 st.write("")
 
-# =========================================================
 # 5. TỔNG QUAN
-# =========================================================
 left, right = st.columns([1, 1.35], gap="large")
 with left:
     with st.container(border=True):
@@ -279,9 +297,7 @@ with right:
                         f'<span>{r["% Tích cực"]}% tích cực</span><span>{int(r["Lượt đề cập"])} lượt</span></div></div>',
                         unsafe_allow_html=True)
 
-# =========================================================
 # 6. BIỂU ĐỒ 12 KHÍA CẠNH
-# =========================================================
 st.write("")
 with st.container(border=True):
     heading("Cảm xúc theo từng khía cạnh", "Chuyển tab để xem số lượng hoặc tỷ lệ phần trăm")
@@ -304,9 +320,7 @@ with st.container(border=True):
     st.markdown('<div class="note">Tỷ lệ cảm xúc = số lượt cảm xúc đó ÷ số lượt đề cập của khía cạnh. '
                 'Nhãn “Không đề cập” không tính vào tỷ lệ.</div>', unsafe_allow_html=True)
 
-# =========================================================
 # 7. BẢNG THỐNG KÊ
-# =========================================================
 st.write("")
 with st.container(border=True):
     heading("Bảng thống kê chi tiết", "Thanh màu thể hiện tỷ lệ tích cực, tiêu cực, trung lập")
@@ -327,12 +341,16 @@ with st.container(border=True):
             '<th>Trung lập</th><th>Lượt đề cập</th><th>Không đề cập</th><th>Tỷ lệ tích cực</th><th>% Tiêu cực</th>'
             f'<th>% Trung lập</th></tr></thead><tbody>{rows}</tbody></table></div>')
     st.write("")
-    st.download_button("Tải bảng thống kê (CSV)", shown.reset_index(drop=True).to_csv(index=False).encode("utf-8-sig"),
-                       file_name=f"thong_ke_{batch}.csv", mime="text/csv")
+    d1, d2, _ = st.columns([1, 1, 2], gap="small")
+    d1.download_button("Tải bảng thống kê (CSV)", shown.reset_index(drop=True).to_csv(index=False).encode("utf-8-sig"),
+                       file_name=f"thong_ke_{batch}.csv", mime="text/csv", use_container_width=True)
+    try:
+        d2.download_button("Tải kết quả chi tiết (CSV)", load_export(batch),
+                           file_name=f"{batch}_results.csv", mime="text/csv", use_container_width=True)
+    except BackendError as e:
+        d2.caption(f"Không xuất được kết quả chi tiết: {e}")
 
-# =========================================================
 # 8. XEM BÌNH LUẬN
-# =========================================================
 st.write("")
 with st.container(border=True):
     heading("Xem bình luận theo khía cạnh", "Lọc theo khía cạnh và cảm xúc")
