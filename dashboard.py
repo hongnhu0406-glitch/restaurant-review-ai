@@ -9,56 +9,84 @@ from adapter import (API_BASE_URL, BackendError, compare_with_backend, completed
 
 st.set_page_config(page_title="Restaurant Review AI - Dashboard", page_icon="🍽️", layout="wide",
                    initial_sidebar_state="collapsed")
-
 # 1. DESIGN SYSTEM
 st.markdown("""
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Lato:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Lato:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-:root {--ivory:#F5F0E7;--burgundy:#552824;--burgundy-deep:#351B19;--wine:#87443B;--gold:#B18A4E;
- --gold-light:#D4BE96;--ink:#2F2925;--muted:#6F6258;--line:#E3D0BC;--sage:#68765D;--rose:#A65D50;--sand:#D4BE96;}
-html, body, [class*="css"], .stApp {font-family:'Lato',sans-serif !important;color:var(--ink);}
+:root {--ivory:#F5F0E7;--paper:#FFFEFC;--burgundy:#552824;--burgundy-deep:#351B19;--wine:#87443B;--gold:#B18A4E;
+ --gold-light:#D4BE96;--ink:#2F2925;--muted:#6F6258;--line:#DCCFBD;--sage:#68765D;--rose:#A65D50;--sand:#D4BE96;}
+html, body, [class*="css"], .stApp {font-family:'Lato',sans-serif !important;color:var(--ink);font-weight:400;}
 .stApp, [data-testid="stAppViewContainer"] {
-  background:radial-gradient(ellipse at 10% 0%, rgba(222,177,125,.24), transparent 36rem),
-             radial-gradient(ellipse at 95% 55%, rgba(204,151,105,.12), transparent 32rem), #F8F1E8 !important;}
+  background:
+    radial-gradient(ellipse 420px 250px at -40px -50px,
+      transparent 58%, rgba(199,151,91,.34) 58.4%, transparent 59%,
+      transparent 68%, rgba(199,151,91,.18) 68.4%, transparent 69%),
+    radial-gradient(ellipse 460px 270px at calc(100% + 45px) calc(100% + 55px),
+      transparent 58%, rgba(199,151,91,.30) 58.4%, transparent 59%,
+      transparent 68%, rgba(199,151,91,.16) 68.4%, transparent 69%),
+    radial-gradient(ellipse at 12% 5%, rgba(222,177,125,.22), transparent 34rem),
+    radial-gradient(ellipse at 92% 48%, rgba(204,151,105,.12), transparent 32rem),
+    #F8F1E8 !important;
+  background-attachment:scroll !important;}
 [data-testid="stHeader"] {background:transparent;}
 #MainMenu, footer, .stDeployButton {visibility:hidden;}
-.block-container {max-width:1400px !important;padding-top:.8rem !important;padding-bottom:2.4rem !important;}
+.block-container {max-width:1500px !important;padding-top:.7rem !important;padding-bottom:2.4rem !important;position:relative;}
 /* ---------- Header ---------- */
-.topline {display:flex;justify-content:space-between;border-top:2px solid var(--gold);
- border-bottom:1px solid var(--line);padding:11px 0;margin-bottom:1.6rem;color:var(--muted);
- font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;}
-.topline .brand-mark {color:var(--burgundy);letter-spacing:2.4px;}
-.hero {text-align:center;padding:.2rem 0 1.4rem;}
-.hero-title {color:var(--burgundy);font-family:'Cormorant Garamond',Georgia,serif;
- font-size:clamp(2.6rem,4.6vw,4rem);font-weight:600;letter-spacing:-1px;line-height:1;margin:0;}
-.hero-title em {color:var(--gold);font-weight:500;}
-.hero-subtitle {max-width:700px;margin:.9rem auto 0;color:var(--muted);font-size:15px;font-weight:500;line-height:1.8;}
-.ornament {display:flex;align-items:center;justify-content:center;gap:12px;margin:1.2rem auto 0;color:var(--gold);}
-.ornament:before,.ornament:after {content:"";width:60px;height:1px;background:var(--gold-light);}
-/* ---------- Panels ---------- */
+.topline {display:flex;justify-content:space-between;gap:1rem;border-top:1px solid var(--gold);
+ border-bottom:1px solid var(--line);padding:12px 0;margin-bottom:2.2rem;color:var(--muted);
+ font-size:10px;font-weight:700;letter-spacing:2.2px;text-transform:uppercase;}
+.topline .brand-mark {color:var(--burgundy);letter-spacing:3px;}
+.hero {display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;
+ box-sizing:border-box;padding:.7rem 0 1.45rem;text-align:center !important;}
+.eyebrow {color:var(--gold);font-size:10px;font-weight:900;letter-spacing:4px;text-transform:uppercase;margin-bottom:1rem;}
+.hero-title {color:var(--burgundy) !important;font-family:'Cormorant Garamond',Georgia,serif !important;
+ font-size:clamp(3rem,5.2vw,4.7rem) !important;font-weight:600 !important;letter-spacing:-1.5px !important;
+ line-height:.94 !important;margin:0 !important;}
+.hero-title em {color:var(--gold);font-weight:700;}
+.hero-subtitle {display:block;width:min(780px,100%);max-width:780px;margin:1.1rem auto 0 !important;padding:0 1rem;
+ box-sizing:border-box;color:var(--ink);font-size:15px;font-weight:500;line-height:1.9;text-align:center !important;}
+.ornament {display:flex;align-items:center;justify-content:center;gap:12px;margin:1.6rem auto 0;color:var(--gold);}
+.ornament:before,.ornament:after {content:"";width:52px;height:1px;background:var(--gold-light);}
+/* ---------- Panels (giống trang chính) ---------- */
 div[data-testid="stVerticalBlockBorderWrapper"], div[data-testid="stVerticalBlockBorderWrapper"] > div {
-  background:linear-gradient(135deg,#FFF9F1 0%,#FCF1E5 60%,#F8E9DA 100%) !important;
-  border:1px solid #D9B9A4 !important;border-radius:16px !important;
-  box-shadow:0 2px 6px rgba(84,45,42,.05),0 14px 30px rgba(84,45,42,.10) !important;overflow:hidden !important;}
+  background:linear-gradient(135deg,#FFF8EF 0%,#FBEFE2 55%,#F7E6D7 100%) !important;background-color:#F9EEE2 !important;
+  border:1.6px solid #98564B !important;border-radius:19px !important;
+  box-shadow:0 5px 12px rgba(84,45,42,.06),0 18px 32px rgba(84,45,42,.15) !important;overflow:hidden !important;}
 div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stVerticalBlock"] {background:transparent !important;}
-div[data-testid="stVerticalBlockBorderWrapper"] > div {padding:1.15rem 1.3rem !important;}
-.panel-heading {display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;
- border-bottom:1px solid #E2C9AE;padding-bottom:12px;margin-bottom:16px;}
-.section-title {color:var(--burgundy);font-family:'Cormorant Garamond',Georgia,serif;font-size:1.85rem;font-weight:600;line-height:1.1;margin:0;}
-.section-description {color:var(--muted);font-size:13px;font-weight:500;line-height:1.6;}
-[data-testid="stWidgetLabel"] p {color:var(--burgundy) !important;font-size:13px !important;font-weight:700 !important;}
-[data-testid="stAlert"] {border-radius:8px !important;}
+div[data-testid="stVerticalBlockBorderWrapper"] > div {padding:1.05rem 1.1rem !important;}
+.panel-heading {border-bottom:1px solid #D9BFA0;padding-bottom:18px;margin-bottom:20px;}
+.section-kicker {color:var(--gold);font-size:9px;font-weight:900;letter-spacing:2.8px;text-transform:uppercase;margin-bottom:5px;}
+.section-title {color:var(--burgundy);font-family:'Cormorant Garamond',Georgia,serif;font-size:2.15rem;font-weight:600;line-height:1.1;margin:0 0 .35rem;}
+.section-description {color:var(--muted);font-size:13px;font-weight:500;line-height:1.75;}
+[data-testid="stWidgetLabel"] p {color:var(--burgundy) !important;font-family:'Lato',sans-serif !important;font-size:13px !important;font-weight:800 !important;}
+[data-testid="stAlert"] {border-radius:2px !important;font-family:'Lato',sans-serif !important;}
+[data-testid="stCaptionContainer"] p {color:var(--muted) !important;font-family:'Lato',sans-serif !important;font-size:12px !important;font-weight:600 !important;}
+/* ---------- Font cho ô chọn / ô số / checkbox / danh sách thả xuống ---------- */
+.stSelectbox *, .stNumberInput *, .stCheckbox *, .stMultiSelect *, [data-baseweb="popover"] *, [data-baseweb="menu"] * {
+ font-family:'Lato',sans-serif !important;}
+.stSelectbox [data-baseweb="select"] div, .stNumberInput input, .stMultiSelect [data-baseweb="select"] div {
+ font-size:14px !important;font-weight:500 !important;}
+.stCheckbox label p {font-size:13px !important;font-weight:800 !important;}
+/* ---------- Buttons (giống trang chính) ---------- */
+.stButton>button, .stDownloadButton>button {min-height:44px;border-radius:2px !important;border:1px solid var(--burgundy) !important;
+ background:var(--burgundy) !important;color:#FFFDF8 !important;font-family:'Lato',sans-serif !important;font-size:12px !important;
+ font-weight:900 !important;letter-spacing:1.5px !important;text-transform:uppercase;transition:all .2s ease;}
+.stButton>button:hover, .stDownloadButton>button:hover {background:var(--burgundy-deep) !important;border-color:var(--gold) !important;transform:translateY(-1px);}
+.stButton>button p, .stButton>button span, .stDownloadButton>button p {color:inherit !important;font-family:'Lato',sans-serif !important;}
+/* ---------- Thanh chuyển dọc (st.radio) ---------- */
+.stRadio [role="radiogroup"] {gap:4px;}
+.stRadio label {padding:10px 12px;border-radius:6px;border-left:3px solid transparent;cursor:pointer;width:100%;}
+.stRadio label > div:first-child {display:none;}
+.stRadio label p {font-family:'Lato',sans-serif !important;font-size:14px !important;font-weight:700 !important;color:var(--muted) !important;}
+.stRadio label:has(input:checked) {background:#F2EBDD;border-left-color:var(--gold);}
+.stRadio label:has(input:checked) p {color:var(--burgundy) !important;}
+.stRadio label:hover {background:#F6EAD9;}
 /* ---------- Tabs ---------- */
 button[data-baseweb="tab"] {font-family:'Lato',sans-serif !important;font-weight:700 !important;color:var(--muted) !important;}
 button[data-baseweb="tab"][aria-selected="true"] {color:var(--burgundy) !important;}
 div[data-baseweb="tab-highlight"] {background:var(--gold) !important;height:3px !important;}
-/* ---------- Download ---------- */
-.stDownloadButton>button {min-height:42px;border-radius:8px !important;border:1px solid var(--burgundy) !important;
- background:var(--burgundy) !important;color:#FFFDF8 !important;font-size:13px !important;font-weight:700 !important;}
-.stDownloadButton>button:hover {background:var(--burgundy-deep) !important;border-color:var(--gold) !important;}
-.stDownloadButton>button p {color:inherit !important;}
 /* ---------- Insight band ---------- */
 .insight {display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:4px 0 18px;}
 .insight-item {display:flex;gap:14px;align-items:center;background:#FFFEFC;border:1px solid var(--line);
@@ -86,9 +114,9 @@ div[data-baseweb="tab-highlight"] {background:var(--gold) !important;height:3px 
 .rank-bar {flex:1;height:6px;background:#EADFCF;border-radius:4px;overflow:hidden;}
 .rank-bar span {display:block;height:100%;background:var(--sage);} .rank-card.bad .rank-bar span {background:var(--rose);}
 /* ---------- Tables ---------- */
-.tbl-wrap {width:100%;overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:#FFFEFC;}
-.tbl {width:100%;border-collapse:separate;border-spacing:0;font-size:13px;color:#4A342E;}
-.tbl th {background:#EFDFCB;color:var(--burgundy);font-weight:800;text-align:left;padding:12px 14px;
+.tbl-wrap {width:100%;overflow-x:auto;border:1px solid #E3D0BC;border-radius:9px;background:#FFFEFC;}
+.tbl {width:100%;border-collapse:separate;border-spacing:0;font-family:'Lato',sans-serif;font-size:13px;color:#4A342E;}
+.tbl th {background:#EAD7C2;color:var(--burgundy);font-weight:800;text-align:left;padding:12px 14px;
  border-bottom:1px solid #D8B98F;white-space:nowrap;position:sticky;top:0;}
 .tbl td {padding:11px 14px;border-bottom:1px solid #F0E4D6;background:#FFFEFC;vertical-align:middle;}
 .tbl tbody tr:nth-child(even) td {background:#FBF5EC;}
@@ -96,7 +124,7 @@ div[data-baseweb="tab-highlight"] {background:var(--gold) !important;height:3px 
 .tbl tbody tr:last-child td {border-bottom:none;}
 .tbl .num {text-align:center;font-weight:700;font-variant-numeric:tabular-nums;}
 .tbl .pos-n {color:#526B43;} .tbl .neg-n {color:#914C3D;} .tbl .neu-n {color:#8A641F;} .tbl .dim {color:#B0A294;font-weight:500;}
-.badge {display:inline-block;padding:4px 11px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap;}
+.badge {display:inline-block;padding:5px 10px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;}
 .badge.pos {background:#E3ECD9;color:#526B43;} .badge.neg {background:#F0DDD6;color:#914C3D;}
 .badge.neu {background:#F5E6C8;color:#8A641F;}
 .mix {display:flex;width:150px;height:9px;border-radius:5px;overflow:hidden;background:#EADFCF;}
@@ -110,12 +138,12 @@ div[data-baseweb="tab-highlight"] {background:var(--gold) !important;height:3px 
 .rv-head {display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:7px;}
 .rv-id {color:var(--muted);font-size:12px;font-weight:700;}
 .rv-conf {color:var(--muted);font-size:12px;font-weight:600;margin-left:8px;}
-.rv-body {color:var(--ink);font-size:14px;line-height:1.75;font-weight:500;overflow-wrap:anywhere;}
-.note {color:var(--muted);font-size:12px;font-weight:500;line-height:1.7;margin:10px 0 0;}
+.rv-body {color:var(--ink);font-size:14px;line-height:1.9;font-weight:500;overflow-wrap:anywhere;}
+.note {color:var(--muted);font-size:12px;font-weight:600;line-height:1.7;margin:10px 0 0;}
 .page-footer {border-top:1px solid var(--gold-light);margin-top:2.5rem;padding-top:15px;display:flex;justify-content:space-between;
- gap:12px;color:var(--muted);font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;}
-@media(max-width:760px) {.block-container {padding:1rem 1rem 2rem !important;} .insight {grid-template-columns:1fr;}
- .page-footer {flex-direction:column;}}
+ gap:12px;color:var(--muted);font-size:9px;font-weight:700;letter-spacing:1.7px;text-transform:uppercase;}
+@media(max-width:760px) {.block-container {padding:1rem 1rem 2rem !important;} .hero {padding:.5rem 0 1.5rem;}
+ .hero-title {font-size:3.2rem !important;} .insight {grid-template-columns:1fr;} .page-footer {flex-direction:column;}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -132,9 +160,20 @@ def style_fig(fig, height):
     return fig
 
 
+KICKERS = {
+    "Biểu đồ cảm xúc": "Sentiment charts",
+    "Chọn lần phân tích": "Data source",
+    "Cơ cấu cảm xúc": "Overall sentiment",
+    "Cảm xúc theo từng khía cạnh": "Aspect-based sentiment",
+    "Bảng thống kê chi tiết": "Statistics",
+    "Xem bình luận theo khía cạnh": "Reviews",
+}
+
+
 def heading(title, desc=""):
+    k = f'<div class="section-kicker">{KICKERS[title]}</div>' if title in KICKERS else ""
     d = f'<div class="section-description">{desc}</div>' if desc else ""
-    st.markdown(f'<div class="panel-heading"><div class="section-title">{title}</div>{d}</div>',
+    st.markdown(f'<div class="panel-heading">{k}<div class="section-title">{title}</div>{d}</div>',
                 unsafe_allow_html=True)
 
 
@@ -170,17 +209,42 @@ def reload_data():
     st.cache_data.clear()
     st.rerun()
 
+
+def stats_table_html(data, compact=False):
+    """Bảng thống kê khía cạnh. compact=True: bản gọn để đặt trong tab."""
+    rows = ""
+    for _, r in data.sort_values("Lượt đề cập", ascending=False).iterrows():
+        mix = ('<span class="dim">—</span>' if r["Lượt đề cập"] == 0 else
+               '<div class="mix-wrap"><div class="mix">'
+               f'<i class="p" style="width:{width(r["% Tích cực"])}%"></i>'
+               f'<i class="n" style="width:{width(r["% Tiêu cực"])}%"></i>'
+               f'<i class="u" style="width:{width(r["% Trung lập"])}%"></i></div>'
+               f'<span>{pct(r["% Tích cực"])}</span></div>')
+        rows += (f'<tr><td><b>{html.escape(r["Khía cạnh"])}</b></td>'
+                 f'<td class="num pos-n">{int(r["Tích cực"])}</td><td class="num neg-n">{int(r["Tiêu cực"])}</td>'
+                 f'<td class="num neu-n">{int(r["Trung lập"])}</td><td class="num">{int(r["Lượt đề cập"])}</td>')
+        if not compact:
+            rows += f'<td class="num dim">{int(r["Không đề cập"])}</td>'
+        rows += f'<td>{mix}</td>'
+        if not compact:
+            rows += f'<td class="num">{pct(r["% Tiêu cực"])}</td><td class="num">{pct(r["% Trung lập"])}</td>'
+        rows += '</tr>'
+    head = ('<th>Khía cạnh</th><th>Tích cực</th><th>Tiêu cực</th><th>Trung lập</th><th>Lượt đề cập</th>'
+            + ('' if compact else '<th>Không đề cập</th>') + '<th>Tỷ lệ tích cực</th>'
+            + ('' if compact else '<th>% Tiêu cực</th><th>% Trung lập</th>'))
+    return f'<div class="tbl-wrap"><table class="tbl"><thead><tr>{head}</tr></thead><tbody>{rows}</tbody></table></div>'
+
 # 2. HEADER
 st.markdown("""
 <div class="topline"><span class="brand-mark">Restaurant Review AI</span><span>Bảng thống kê</span></div>
 <section class="hero">
+  <div class="eyebrow">Understand every dining experience</div>
   <h1 class="hero-title">Khách hàng nói gì về <em>nhà hàng</em></h1>
   <p class="hero-subtitle">Cảm xúc của khách theo từng khía cạnh: món ăn, giá cả, phục vụ, không gian.
   Từ đó biết nên phát huy điều gì và cải thiện điều gì.</p>
   <div class="ornament">✦</div>
 </section>
 """, unsafe_allow_html=True)
-
 # 3. DỮ LIỆU VÀ BỘ LỌC
 with st.container(border=True):
     heading("Chọn lần phân tích", "Dữ liệu lấy trực tiếp từ backend. Chỉ hiển thị các batch đã hoàn tất (Completed).")
@@ -245,7 +309,7 @@ tbl, ov = aspect_table(df), overall(df)
 shown = tbl if show_empty else tbl[tbl["Lượt đề cập"] > 0]
 diff = compare_with_backend(tbl, ov, backend_stats)
 if diff:
-    st.warning("Số liệu dashboard lệch với thống kê của backend, cần kiểm tra lại với backend: " + "; ".join(diff[:5]))
+    st.warning("Số liệu dashboard lệch với thống kê của backend, cần kiểm tra lại: " + "; ".join(diff[:5]))
 
 top, low = strengths_weaknesses(tbl, int(min_m))
 
@@ -268,88 +332,106 @@ kpi(k3, "Tỷ lệ tích cực chung", f"{ov['pos_rate']}%" if ov["pos_rate"] is
 kpi(k4, "Khía cạnh được nhắc tới", f"{int((tbl['Lượt đề cập'] > 0).sum())}/12", "Trên tổng 12 khía cạnh")
 st.write("")
 
-# 5. TỔNG QUAN
-left, right = st.columns([1, 1.35], gap="large")
-with left:
-    with st.container(border=True):
-        heading("Cơ cấu cảm xúc", "Tỷ trọng trên toàn bộ lượt đề cập")
-        pie = go.Figure(go.Pie(labels=list(COLORS), values=[ov["pos"], ov["neg"], ov["neu"]], hole=.66, sort=False,
-                               marker=dict(colors=list(COLORS.values()), line=dict(color="#FBF1E4", width=3)),
-                               textinfo="percent", textfont=dict(size=13, color="#FFFFFF"),
-                               hovertemplate="%{label}: %{value} lượt (%{percent})<extra></extra>"))
-        pie.add_annotation(text=f"<b style='font-size:30px;color:#552824'>{ov['mentions']:,}</b><br>lượt đề cập",
-                           showarrow=False, font=dict(size=12, color="#6F6258"))
-        st.plotly_chart(style_fig(pie, 330), width="stretch")
-with right:
-    with st.container(border=True):
-        heading("Nên phát huy và cần cải thiện", f"Chỉ xếp hạng khía cạnh có từ {int(min_m)} lượt đề cập")
-        if top.empty:
-            st.info(f"Chưa có khía cạnh nào đạt tối thiểu {int(min_m)} lượt đề cập để xếp hạng.")
-        else:
-            a, b = st.columns(2, gap="medium")
-            a.markdown('<div class="rank-title good">▲ Nên phát huy</div>', unsafe_allow_html=True)
-            b.markdown('<div class="rank-title bad">▼ Cần cải thiện</div>', unsafe_allow_html=True)
-            for col, data, cls in ((a, top, ""), (b, low, "bad")):
-                for _, r in data.iterrows():
-                    col.markdown(
-                        f'<div class="rank-card {cls}"><div class="rank-name">{html.escape(r["Khía cạnh"])}</div>'
-                        f'<div class="rank-meta"><div class="rank-bar"><span style="width:{width(r["% Tích cực"])}%"></span></div>'
-                        f'<span>{r["% Tích cực"]}% tích cực</span><span>{int(r["Lượt đề cập"])} lượt</span></div></div>',
-                        unsafe_allow_html=True)
+# 5. BIỂU ĐỒ CẢM XÚC (thanh chuyển dọc bên trái)
+order = shown.sort_values("Lượt đề cập")
+ment = order[order["Lượt đề cập"] > 0]
+NOTE = ('<div class="note">Tỷ lệ cảm xúc = số lượt cảm xúc đó ÷ số lượt đề cập của khía cạnh. '
+        'Nhãn “Không đề cập” không tính vào tỷ lệ.</div>')
 
-# 6. BIỂU ĐỒ 12 KHÍA CẠNH
+
+def fig_pie():
+    fig = go.Figure(go.Pie(labels=list(COLORS), values=[ov["pos"], ov["neg"], ov["neu"]], hole=.66, sort=False,
+                           marker=dict(colors=list(COLORS.values()), line=dict(color="#FBF1E4", width=3)),
+                           textinfo="percent", textfont=dict(size=13, color="#FFFFFF"),
+                           outsidetextfont=dict(size=13, color="#552824"),
+                           hovertemplate="%{label}: %{value} lượt (%{percent})<extra></extra>"))
+    fig.add_annotation(text=f"<b style='font-size:30px;color:#552824'>{ov['mentions']:,}</b><br>lượt đề cập",
+                       showarrow=False, font=dict(size=12, color="#6F6258"))
+    return style_fig(fig, 360).update_layout(margin=dict(t=70, b=40, l=10, r=10),
+                                             legend=dict(orientation="h", y=1.14, x=.5, xanchor="center"))
+
+
+def fig_counts():
+    fig = go.Figure([go.Bar(name=k, y=order["Khía cạnh"], x=order[k], orientation="h", marker_color=v,
+                            hovertemplate="%{y}<br>" + k + ": %{x} lượt<extra></extra>") for k, v in COLORS.items()])
+    fig.update_layout(barmode="stack", xaxis_title="Số lượt đề cập", bargap=.35)
+    return style_fig(fig, max(340, 40 * len(order) + 100))
+
+
+def fig_percent():
+    fig = go.Figure([go.Bar(name=k, y=ment["Khía cạnh"], x=ment[f"% {k}"], orientation="h", marker_color=v,
+                            text=ment[f"% {k}"].round(0).astype(int).astype(str) + "%", textposition="inside",
+                            textfont=dict(color="#FFFFFF" if k != "Trung lập" else "#5B4A2A"),
+                            hovertemplate="%{y}<br>" + k + ": %{x:.1f}%<extra></extra>")
+                     for k, v in COLORS.items()])
+    fig.update_layout(barmode="stack", xaxis=dict(range=[0, 100], title="% trên số lượt đề cập"), bargap=.35)
+    return style_fig(fig, max(340, 40 * len(ment) + 100))
+
+
+def view_overview():  # hai biểu đồ cạnh nhau
+    c1, c2 = st.columns([1, 1.3], gap="medium")
+    c1.plotly_chart(fig_pie(), width="stretch")
+    c2.plotly_chart(fig_counts(), width="stretch")
+
+
+def view_pie():
+    st.plotly_chart(fig_pie(), width="stretch")
+
+
+def view_counts():
+    st.plotly_chart(fig_counts(), width="stretch")
+
+
+def view_percent():
+    st.plotly_chart(fig_percent(), width="stretch")
+    st.markdown(NOTE, unsafe_allow_html=True)
+
+
+def view_table():
+    st.html(stats_table_html(shown, compact=True))
+
+
+# Muốn thêm biểu đồ mới: viết một hàm view_xxx() rồi thêm một dòng vào đây.
+VIEWS = {
+    "Tổng quan": view_overview,
+    "Cơ cấu cảm xúc": view_pie,
+    "Số lượt đề cập": view_counts,
+    "Tỷ lệ phần trăm": view_percent,
+    "Bảng thống kê chi tiết": view_table,
+}
+
+
 st.write("")
 with st.container(border=True):
-    heading("Cảm xúc theo từng khía cạnh", "Chuyển tab để xem số lượng hoặc tỷ lệ phần trăm")
-    order = shown.sort_values("Lượt đề cập")
-    tab_a, tab_b = st.tabs(["Số lượt đề cập", "Tỷ lệ phần trăm"])
-    with tab_a:
-        f1 = go.Figure([go.Bar(name=k, y=order["Khía cạnh"], x=order[k], orientation="h", marker_color=v,
-                               hovertemplate="%{y}<br>" + k + ": %{x} lượt<extra></extra>") for k, v in COLORS.items()])
-        f1.update_layout(barmode="stack", xaxis_title="Số lượt đề cập", bargap=.35)
-        st.plotly_chart(style_fig(f1, max(340, 40 * len(order) + 100)), width="stretch")
-    with tab_b:
-        ment = order[order["Lượt đề cập"] > 0]
-        f2 = go.Figure([go.Bar(name=k, y=ment["Khía cạnh"], x=ment[f"% {k}"], orientation="h", marker_color=v,
-                               text=ment[f"% {k}"].round(0).astype(int).astype(str) + "%", textposition="inside",
-                               textfont=dict(color="#FFFFFF" if k != "Trung lập" else "#5B4A2A"),
-                               hovertemplate="%{y}<br>" + k + ": %{x:.1f}%<extra></extra>")
-                        for k, v in COLORS.items()])
-        f2.update_layout(barmode="stack", xaxis=dict(range=[0, 100], title="% trên số lượt đề cập"), bargap=.35)
-        st.plotly_chart(style_fig(f2, max(340, 40 * len(ment) + 100)), width="stretch")
-    st.markdown('<div class="note">Tỷ lệ cảm xúc = số lượt cảm xúc đó ÷ số lượt đề cập của khía cạnh. '
-                'Nhãn “Không đề cập” không tính vào tỷ lệ.</div>', unsafe_allow_html=True)
+    heading("Biểu đồ cảm xúc", "Chọn kiểu hiển thị ở danh sách bên trái")
 
-# 7. BẢNG THỐNG KÊ
-st.write("")
-with st.container(border=True):
-    heading("Bảng thống kê chi tiết", "Thanh màu thể hiện tỷ lệ tích cực, tiêu cực, trung lập")
-    rows = ""
-    for _, r in shown.sort_values("Lượt đề cập", ascending=False).iterrows():
-        mix = ('<span class="dim">—</span>' if r["Lượt đề cập"] == 0 else
-               '<div class="mix-wrap"><div class="mix">'
-               f'<i class="p" style="width:{width(r["% Tích cực"])}%"></i>'
-               f'<i class="n" style="width:{width(r["% Tiêu cực"])}%"></i>'
-               f'<i class="u" style="width:{width(r["% Trung lập"])}%"></i></div>'
-               f'<span>{pct(r["% Tích cực"])}</span></div>')
-        rows += (f'<tr><td><b>{html.escape(r["Khía cạnh"])}</b></td>'
-                 f'<td class="num pos-n">{int(r["Tích cực"])}</td><td class="num neg-n">{int(r["Tiêu cực"])}</td>'
-                 f'<td class="num neu-n">{int(r["Trung lập"])}</td><td class="num">{int(r["Lượt đề cập"])}</td>'
-                 f'<td class="num dim">{int(r["Không đề cập"])}</td><td>{mix}</td>'
-                 f'<td class="num">{pct(r["% Tiêu cực"])}</td><td class="num">{pct(r["% Trung lập"])}</td></tr>')
-    st.html('<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Khía cạnh</th><th>Tích cực</th><th>Tiêu cực</th>'
-            '<th>Trung lập</th><th>Lượt đề cập</th><th>Không đề cập</th><th>Tỷ lệ tích cực</th><th>% Tiêu cực</th>'
-            f'<th>% Trung lập</th></tr></thead><tbody>{rows}</tbody></table></div>')
-    st.write("")
-    d1, d2, _ = st.columns([1, 1, 2], gap="small")
-    d1.download_button("Tải bảng thống kê (CSV)", shown.reset_index(drop=True).to_csv(index=False).encode("utf-8-sig"),
-                       file_name=f"thong_ke_{batch}.csv", mime="text/csv", use_container_width=True)
-    try:
-        d2.download_button("Tải kết quả chi tiết (CSV)", load_export(batch),
-                           file_name=f"{batch}_results.csv", mime="text/csv", use_container_width=True)
-    except BackendError as e:
-        d2.caption(f"Không xuất được kết quả chi tiết: {e}")
+    nav, divider, body = st.columns([1, 0.035, 5], gap="medium")
 
+    choice = nav.radio(
+        "Kiểu hiển thị",
+        list(VIEWS),
+        label_visibility="collapsed"
+    )
+
+    with divider:
+        st.markdown("""
+        <div style="
+            width: 1px;
+            height: 340px;
+            margin: 8px auto;
+            background: linear-gradient(
+                to bottom,
+                transparent,
+                #B18A4E 15%,
+                #DCCFBD 50%,
+                #B18A4E 85%,
+                transparent
+            );
+        "></div>
+        """, unsafe_allow_html=True)
+
+    with body:
+        VIEWS[choice]()
 # 8. XEM BÌNH LUẬN
 st.write("")
 with st.container(border=True):
