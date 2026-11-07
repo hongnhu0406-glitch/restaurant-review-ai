@@ -378,7 +378,9 @@ def fig_percent():
                      for k, v in COLORS.items()])
     fig.update_layout(barmode="stack", xaxis=dict(range=[0, 100], title="% trên số lượt đề cập"), bargap=.35)
     fig = style_fig(fig, max(340, 40 * len(ment) + 100))
-    return fig.update_xaxes(dtick=20, ticksuffix="%")
+    fig.update_layout(margin=dict(t=30, b=10, l=10, r=30))
+    ticks = [0, 20, 40, 60, 80, 100]
+    return fig.update_xaxes(tickmode="array", tickvals=ticks, ticktext=[f"{t}%" for t in ticks])
 
 
 def view_overview():  # hai biểu đồ cạnh nhau
