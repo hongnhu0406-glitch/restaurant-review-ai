@@ -83,6 +83,7 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div {padding:1.05rem 1.1rem !i
 .stRadio label:has(input:checked) {background:#F2EBDD;border-left-color:var(--gold);}
 .stRadio label:has(input:checked) p {color:var(--burgundy) !important;}
 .stRadio label:hover {background:#F6EAD9;}
+[data-testid="stButtonGroup"] button p {font-family:'Lato',sans-serif !important;font-size:13px !important;font-weight:700 !important;}
 /* ---------- Tabs ---------- */
 button[data-baseweb="tab"] {font-family:'Lato',sans-serif !important;font-weight:700 !important;color:var(--muted) !important;}
 button[data-baseweb="tab"][aria-selected="true"] {color:var(--burgundy) !important;}
@@ -351,11 +352,22 @@ def fig_pie():
                                              legend=dict(orientation="h", y=1.14, x=.5, xanchor="center"))
 
 
+def nice_step(mx):
+    """Bước chia trục số nguyên cho đẹp: 1, 2, 5, 10, 20, 50..."""
+    raw = max(1, -(-int(mx) // 6))
+    for step in (1, 2, 5, 10, 20, 50, 100, 200, 500, 1000):
+        if step >= raw:
+            return step
+    return raw
+
+
 def fig_counts():
     fig = go.Figure([go.Bar(name=k, y=order["Khía cạnh"], x=order[k], orientation="h", marker_color=v,
                             hovertemplate="%{y}<br>" + k + ": %{x} lượt<extra></extra>") for k, v in COLORS.items()])
+    mx = int(order[list(COLORS)].sum(axis=1).max()) if len(order) else 1
     fig.update_layout(barmode="stack", xaxis_title="Số lượt đề cập", bargap=.35)
-    return style_fig(fig, max(340, 40 * len(order) + 100))
+    fig = style_fig(fig, max(340, 40 * len(order) + 100))
+    return fig.update_xaxes(dtick=nice_step(mx), tickformat="d", rangemode="tozero")
 
 
 def fig_percent():
@@ -365,14 +377,18 @@ def fig_percent():
                             hovertemplate="%{y}<br>" + k + ": %{x:.1f}%<extra></extra>")
                      for k, v in COLORS.items()])
     fig.update_layout(barmode="stack", xaxis=dict(range=[0, 100], title="% trên số lượt đề cập"), bargap=.35)
-    return style_fig(fig, max(340, 40 * len(ment) + 100))
+    fig = style_fig(fig, max(340, 40 * len(ment) + 100))
+    return fig.update_xaxes(dtick=20, ticksuffix="%")
 
 
 def view_overview():  # hai biểu đồ cạnh nhau
     c1, c2 = st.columns([1, 1.3], gap="medium")
     c1.plotly_chart(fig_pie(), width="stretch")
-    c2.plotly_chart(fig_counts(), width="stretch")
-
+    with c2:
+        _, sw = st.columns([.6, 1.4])
+        mode = sw.segmented_control("Kiểu hiển thị", ["Số lượt đề cập", "Phần trăm"], default="Số lượt đề cập",
+                                    key="overview_bar_mode", label_visibility="collapsed") or "Số lượt đề cập"
+        st.plotly_chart(fig_counts() if mode == "Số lượt đề cập" else fig_percent(), width="stretch")
 
 def view_pie():
     st.plotly_chart(fig_pie(), width="stretch")
@@ -394,9 +410,6 @@ def view_table():
 # Muốn thêm biểu đồ mới: viết một hàm view_xxx() rồi thêm một dòng vào đây.
 VIEWS = {
     "Tổng quan": view_overview,
-    "Cơ cấu cảm xúc": view_pie,
-    "Số lượt đề cập": view_counts,
-    "Tỷ lệ phần trăm": view_percent,
     "Bảng thống kê chi tiết": view_table,
 }
 
