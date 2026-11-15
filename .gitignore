@@ -6,3 +6,5 @@ venv/
 data/*.db
 data/temp/
 exports/*.csv
+models/*.pt
+models/*.pth

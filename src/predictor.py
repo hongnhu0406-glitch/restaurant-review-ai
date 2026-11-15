@@ -16,6 +16,8 @@ POSITIVE_KEYWORDS = {
 
     "FOOD#PRICES": [
         "giá món ăn hợp lý", "giá đồ ăn hợp lý",
+        "giá món ăn ổn", "giá đồ ăn ổn", "đồ ăn giá ổn",
+        "giá món ăn tốt", "giá đồ ăn tốt",
         "food prices are reasonable", "reasonable food prices",
         "affordable food", "food is affordable"
     ],
@@ -33,6 +35,8 @@ POSITIVE_KEYWORDS = {
 
     "DRINKS#PRICES": [
         "giá đồ uống hợp lý", "đồ uống giá rẻ",
+        "giá đồ uống ổn", "giá nước ổn", "nước giá ổn",
+        "giá đồ uống tốt",
         "reasonable drink prices", "cheap drinks"
     ],
 
@@ -48,7 +52,10 @@ POSITIVE_KEYWORDS = {
     ],
 
     "RESTAURANT#PRICES": [
+        "giá ổn", "giá cả ổn", "giá ok", "giá cả ok",
+        "giá tốt", "giá vừa phải", "giá mềm",
         "giá hợp lý", "giá cả phải chăng", "giá rẻ",
+        "hợp túi tiền", "vừa túi tiền",
         "reasonable prices", "affordable prices",
         "cheap prices", "good value"
     ],
