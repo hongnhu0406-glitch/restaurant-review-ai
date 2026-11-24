@@ -24,7 +24,7 @@ def create_review_record(review, batch_id=None, review_id=None):
         batch_id = generate_batch_id()
 
     if review_id is None:
-        review_id = generate_review_id()
+        review_id = generate_review_id(batch_id)
 
     return {
         "batch_id": batch_id,
@@ -80,8 +80,9 @@ def analyze_single_review(review):
         raise
 
 
-def load_reviews_csv(file_path):
-    """Đọc và kiểm tra dữ liệu đánh giá từ CSV."""
+
+def load_reviews_csv(file_path, batch_id):
+    """Đọc và kiểm tra toàn bộ dữ liệu Review từ CSV."""
 
     file_path = Path(file_path)
 
@@ -93,7 +94,7 @@ def load_reviews_csv(file_path):
     if file_path.suffix.lower() != ".csv":
         raise ValueError("Chỉ chấp nhận file CSV.")
 
-    # Đọc CSV, ưu tiên UTF-8-SIG.
+    # 1. Đọc CSV
     try:
         df = pd.read_csv(
             file_path,
@@ -112,53 +113,94 @@ def load_reviews_csv(file_path):
             "File CSV bắt buộc phải có cột Review."
         )
 
-    # Loại bỏ dòng rỗng.
-    df = df.dropna(subset=["Review"]).copy()
-    df["Review"] = df["Review"].astype(str).str.strip()
-    df = df[df["Review"] != ""].copy()
+    # 2. Lưu số thứ tự dòng dữ liệu trong file
+    df = df.copy()
+    df["row_number"] = df.index + 2
 
-    # Chuẩn hóa review_id.
+    # 3. Chuẩn hóa Review và kiểm tra từng dòng
+    errors = []
+
+    for index, row in df.iterrows():
+        row_number = row["row_number"]
+        review = row["Review"]
+
+        try:
+            if pd.isna(review):
+                raise ValueError(
+                    "Nội dung Review không được để trống."
+                )
+
+            df.at[index, "Review"] = validate_review(
+                str(review)
+            )
+
+        except (TypeError, ValueError) as error:
+            errors.append(
+                f"Dòng {row_number}: {str(error)}"
+            )
+
+    # 4. Chuẩn hóa review_id
     if "review_id" not in df.columns:
         df["review_id"] = None
 
+    df["review_id"] = df["review_id"].apply(
+        lambda value: (
+            str(value).strip()
+            if pd.notna(value) and str(value).strip()
+            else None
+        )
+    )
+
+    # 5. Kiểm tra review_id trùng lặp
+    duplicated = df["review_id"].notna() & (
+        df["review_id"].duplicated(keep=False)
+    )
+
+    for _, row in df[duplicated].iterrows():
+        errors.append(
+            f"Dòng {row['row_number']}: "
+            f"review_id '{row['review_id']}' bị trùng."
+        )
+
+    # 6. Nếu có lỗi, dừng trước khi phân tích
+    if errors:
+        error_message = (
+            f"File CSV có {len(errors)} lỗi đầu vào:\n"
+            + "\n".join(errors)
+        )
+        raise ValueError(error_message)
+
+    # 7. Tự sinh review_id cho các dòng chưa có ID
+    existing_ids = set(df["review_id"].dropna())
+
     for index in df.index:
-        current_id = df.at[index, "review_id"]
+        if df.at[index, "review_id"] is None:
+            new_id = generate_review_id(batch_id)
 
-        if pd.isna(current_id) or str(current_id).strip() == "":
-            df.at[index, "review_id"] = generate_review_id()
-        else:
-            df.at[index, "review_id"] = str(current_id).strip()
+            while new_id in existing_ids:
+                new_id = generate_review_id(batch_id)
 
-    # Không cho phép ID trùng nhau trong cùng CSV.
-    duplicated = df["review_id"].duplicated(keep=False)
+            df.at[index, "review_id"] = new_id
+            existing_ids.add(new_id)
 
-    if duplicated.any():
-        duplicated_ids = (
-            df.loc[duplicated, "review_id"]
-            .astype(str)
-            .unique()
-            .tolist()
-        )
-
-        raise ValueError(
-            f"Phát hiện review_id trùng lặp: {duplicated_ids[:20]}"
-        )
-
-    cleaned_df = df[["review_id", "Review"]].reset_index(drop=True)
+    # 8. Trả về dữ liệu hợp lệ
+    cleaned_df = df[
+        ["review_id", "Review", "row_number"]
+    ].reset_index(drop=True)
 
     cleaned_df.attrs["total_rows"] = total_rows
-    cleaned_df.attrs["skipped_rows"] = total_rows - len(cleaned_df)
+    cleaned_df.attrs["skipped_rows"] = 0
 
     return cleaned_df
 
 
+
 def process_batch_csv(file_path):
     """
-    Xử lý CSV theo Batch.
-
-    Tiếp tục kiểm tra các review còn lại nếu một review lỗi.
-    Nếu có bất kỳ review nào lỗi, Batch sẽ Failed và không
-    lưu kết quả phân tích một phần vào bảng results.
+    Xử lý CSV theo Batch:
+    - Kiểm tra toàn bộ dữ liệu đầu vào trước khi chạy mô hình.
+    - Nếu CSV có lỗi đầu vào: dừng, không gọi PhoBERT.
+    - Chỉ lưu kết quả khi toàn bộ review được phân tích thành công.
     """
 
     batch_id = generate_batch_id()
@@ -169,8 +211,8 @@ def process_batch_csv(file_path):
     skipped_rows = 0
 
     try:
-        # 1. Đọc và kiểm tra CSV.
-        df = load_reviews_csv(file_path)
+        # 1. Kiểm tra toàn bộ CSV trước khi phân tích.
+        df = load_reviews_csv(file_path, batch_id)
 
         total_rows = df.attrs["total_rows"]
         total_reviews = len(df)
@@ -182,24 +224,20 @@ def process_batch_csv(file_path):
             )
 
         all_results = []
-        review_errors = []
 
-        # 2. Phân tích từng review.
+        # 2. Chỉ chạy PhoBERT khi toàn bộ dữ liệu đầu vào hợp lệ.
         for _, row in df.iterrows():
             review_id = row["review_id"]
             review = row["Review"]
+            row_number = row["row_number"]
 
             try:
-                # Chuẩn hóa và kiểm tra review.
-                review = validate_review(review)
-
-                # Dự đoán.
                 predictions = predict_review(review)
 
-                # Kiểm tra đủ 12 Aspect và định dạng.
+                # Kiểm tra kết quả dự đoán.
                 validate_prediction_results(predictions)
 
-                # Kết hợp kết quả.
+                # Lưu kết quả tạm thời trong bộ nhớ.
                 for prediction in predictions:
                     all_results.append({
                         "batch_id": batch_id,
@@ -211,28 +249,12 @@ def process_batch_csv(file_path):
                     })
 
             except Exception as error:
-                review_errors.append(
-                    f"{review_id}: {str(error)}"
-                )
+                raise RuntimeError(
+                    f"Lỗi khi phân tích dòng {row_number} "
+                    f"(review_id: {review_id}): {str(error)}"
+                ) from error
 
-                # Tiếp tục xử lý review tiếp theo.
-                continue
-
-        # 3. Nếu có review lỗi, không lưu kết quả một phần.
-        if review_errors:
-            error_summary = (
-                f"Có {len(review_errors)} review không phân tích được. "
-                + "; ".join(review_errors[:10])
-            )
-
-            if len(review_errors) > 10:
-                error_summary += (
-                    f"; và {len(review_errors) - 10} lỗi khác."
-                )
-
-            raise RuntimeError(error_summary)
-
-        # 4. Kiểm tra tính toàn vẹn.
+        # 3. Kiểm tra số lượng kết quả.
         expected_results = total_reviews * 12
 
         if len(all_results) != expected_results:
@@ -241,7 +263,7 @@ def process_batch_csv(file_path):
                 f"nhưng nhận được {len(all_results)}."
             )
 
-        # 5. Chuẩn bị batch.
+        # 4. Chuẩn bị dữ liệu Batch.
         batch_result = {
             "batch_id": batch_id,
             "status": "Completed",
@@ -252,13 +274,12 @@ def process_batch_csv(file_path):
             "results": all_results
         }
 
-        # 6. Database tự kiểm tra và commit transaction.
+        # 5. Chỉ lưu khi toàn bộ quá trình thành công.
         save_batch(batch_result)
 
         return batch_result
 
     except Exception as error:
-        # Chỉ cập nhật trạng thái Failed một lần.
         update_batch_status(
             batch_id=batch_id,
             status="Failed",

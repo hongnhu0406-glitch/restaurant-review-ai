@@ -1,7 +1,8 @@
 import re
 
 from src.constants import ASPECTS, SENTIMENT_LABELS
-
+from pathlib import Path
+from model.inference import ABSAInference
 
 # =========================================================
 # 1. TỪ KHÓA TÍCH CỰC THEO TỪNG KHÍA CẠNH
@@ -403,12 +404,36 @@ def predict_review_mock(review):
 # 8. HÀM DỰ ĐOÁN CHÍNH
 # =========================================================
 
+# Khởi tạo mô hình một lần duy nhất
+_absa_model = None
+
+
+def get_absa_model():
+    global _absa_model
+
+    if _absa_model is None:
+        model_dir = Path(__file__).resolve().parent.parent / "model"
+        _absa_model = ABSAInference(model_dir=str(model_dir))
+
+    return _absa_model
+
+
 def predict_review(review):
     """
-    Hàm dự đoán chính được processor sử dụng.
-
-    Hiện tại vẫn sử dụng bộ dự đoán mock.
-    Có thể thay thế bằng PhoBERT sau này.
+    Hàm dự đoán chính sử dụng PhoBERT ABSA V8.
     """
 
-    return predict_review_mock(review)
+    model = get_absa_model()
+    raw_results = model.predict(review)
+
+    results = []
+
+    for item in raw_results:
+        results.append({
+            "Aspect": item["aspect"],
+            "Sentiment": int(item["label_id"]),
+            "Sentiment_Label": item["sentiment"],
+            "Confidence": float(item["confidence"])
+        })
+
+    return results

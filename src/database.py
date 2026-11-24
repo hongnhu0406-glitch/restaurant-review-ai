@@ -758,6 +758,205 @@ def get_batch_detail(batch_id):
     finally:
         conn.close()
 
+def get_dashboard_summary():
+    """
+    Tổng hợp Dashboard từ tất cả Batch đã Completed.
+    Không phân biệt phân tích bình luận đơn lẻ hay CSV.
+    """
+
+    conn = get_connection()
+
+    try:
+        cursor = conn.cursor()
+
+        # 1. Lấy toàn bộ Batch đã hoàn thành
+        cursor.execute("""
+            SELECT *
+            FROM batches
+            WHERE status = 'Completed'
+            ORDER BY created_at DESC
+        """)
+
+        batches = [
+            dict(row) for row in cursor.fetchall()
+        ]
+
+        # Khởi tạo thống kê tổng quan
+        overall = {
+            0: 0,
+            1: 0,
+            2: 0,
+            3: 0
+        }
+
+        # Khởi tạo thống kê 12 khía cạnh
+        aspect_stats = {}
+
+        sentiment_names = {
+            0: "Absent",
+            1: "Positive",
+            2: "Negative",
+            3: "Neutral"
+        }
+
+        for aspect in ASPECTS:
+            aspect_stats[aspect] = {
+                "Absent": 0,
+                "Positive": 0,
+                "Negative": 0,
+                "Neutral": 0
+            }
+
+        # 2. Tổng hợp số liệu từ tất cả Batch Completed
+        cursor.execute("""
+            SELECT
+                r.batch_id,
+                r.review_id,
+                r.Review,
+                r.Aspect,
+                r.Sentiment,
+                r.Confidence
+            FROM results r
+            INNER JOIN batches b
+                ON r.batch_id = b.batch_id
+            WHERE b.status = 'Completed'
+            ORDER BY b.created_at DESC, r.review_id, r.Aspect
+        """)
+
+        results = [
+            dict(row) for row in cursor.fetchall()
+        ]
+
+        # 3. Đếm tổng số cảm xúc và từng khía cạnh
+        for row in results:
+
+            sentiment = int(row["Sentiment"])
+            aspect = row["Aspect"]
+
+            overall[sentiment] += 1
+
+            sentiment_name = sentiment_names[sentiment]
+
+            aspect_stats[aspect][sentiment_name] += 1
+
+        # 4. Tính tỷ lệ cảm xúc theo từng khía cạnh
+        for aspect, data in aspect_stats.items():
+
+            analyzed = (
+                data["Positive"]
+                + data["Negative"]
+                + data["Neutral"]
+            )
+
+            data["Analyzed"] = analyzed
+            data["Total"] = analyzed + data["Absent"]
+
+            for sentiment in [
+                "Positive",
+                "Negative",
+                "Neutral"
+            ]:
+
+                percentage = (
+                    data[sentiment] / analyzed * 100
+                    if analyzed > 0
+                    else 0
+                )
+
+                data[sentiment + "_Percentage"] = round(
+                    percentage, 2
+                )
+
+        # 5. Tổng hợp thông tin các Batch
+        total_reviews = sum(
+            batch["total_reviews"] or 0
+            for batch in batches
+        )
+
+        total_rows = sum(
+            batch["total_rows"] or 0
+            for batch in batches
+        )
+
+        skipped_rows = sum(
+            batch["skipped_rows"] or 0
+            for batch in batches
+        )
+
+        total_results = len(results)
+
+        # 6. Tạo thông tin tổng hợp tương thích
+        # với cấu trúc Dashboard hiện tại
+        summary_batch = {
+            "batch_id": "ALL",
+            "status": "Completed",
+            "total_rows": total_rows,
+            "total_reviews": total_reviews,
+            "skipped_rows": skipped_rows,
+            "total_results": total_results,
+            "created_at": (
+                batches[0]["created_at"]
+                if batches else None
+            )
+        }
+
+        return {
+            "batch": summary_batch,
+            "batches": batches,
+            "overall_statistics": overall,
+            "aspect_statistics": aspect_stats,
+            "results": results,
+            "total_batches": len(batches)
+        }
+
+    finally:
+        conn.close()
+
+
+def clear_all_data():
+    """
+    Xóa toàn bộ dữ liệu Review, lịch sử Batch
+    và reset bộ đếm ID.
+    """
+
+    conn = get_connection()
+
+    try:
+        cursor = conn.cursor()
+
+        # Xóa kết quả phân tích trước
+        cursor.execute("DELETE FROM results")
+
+        # Xóa lịch sử Batch
+        cursor.execute("DELETE FROM batches")
+
+        # Kiểm tra bảng id_counters có tồn tại không
+        cursor.execute("""
+            SELECT name
+            FROM sqlite_master
+            WHERE type = 'table'
+              AND name = 'id_counters'
+        """)
+
+        if cursor.fetchone():
+            cursor.execute("DELETE FROM id_counters")
+
+        # Reset ID tự tăng của bảng results
+        cursor.execute("""
+            DELETE FROM sqlite_sequence
+            WHERE name = 'results'
+        """)
+
+        conn.commit()
+        print("Đã xóa toàn bộ dữ liệu thành công!")
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        conn.close()
+
 if __name__ == "__main__":
     init_database()
 

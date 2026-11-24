@@ -19,7 +19,8 @@ from src.database import (
     fail_stale_batches,
     get_all_batches,
     get_batch_detail,
-    get_dashboard_data
+    get_dashboard_data,
+    get_dashboard_summary
 )
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -240,24 +241,42 @@ def get_batch(batch_id: str):
         )
 
 
+# API 1: Dashboard tổng hợp tất cả Batch
+@app.get("/dashboard/summary")
+def get_dashboard_summary_api():
+    try:
+        dashboard_data = get_dashboard_summary()
+
+        return {
+            "status": "success",
+            "batch": dashboard_data["batch"],
+            "batches": dashboard_data["batches"],
+            "total_batches": dashboard_data["total_batches"],
+            "overall_statistics": dashboard_data["overall_statistics"],
+            "aspect_statistics": dashboard_data["aspect_statistics"],
+            "total_results": len(dashboard_data["results"]),
+            "results": dashboard_data["results"]
+        }
+
+    except Exception as error:
+        print(f"Lỗi Dashboard tổng hợp: {error}")
+        raise HTTPException(
+            status_code=500,
+            detail="Không thể lấy dữ liệu Dashboard tổng hợp."
+        )
+
+
+# API 2: Dashboard theo từng Batch
 @app.get("/dashboard/{batch_id}")
 def get_dashboard(batch_id: str):
-    """
-    Lấy dữ liệu Dashboard theo Batch ID.
-    Chỉ chấp nhận Batch Completed.
-    """
     try:
         dashboard_data = get_dashboard_data(batch_id)
 
         return {
             "status": "success",
             "batch": dashboard_data["batch"],
-            "overall_statistics": dashboard_data[
-                "overall_statistics"
-            ],
-            "aspect_statistics": dashboard_data[
-                "aspect_statistics"
-            ],
+            "overall_statistics": dashboard_data["overall_statistics"],
+            "aspect_statistics": dashboard_data["aspect_statistics"],
             "total_results": len(dashboard_data["results"]),
             "results": dashboard_data["results"]
         }
@@ -268,7 +287,8 @@ def get_dashboard(batch_id: str):
             detail=str(error)
         )
 
-    except Exception:
+    except Exception as error:
+        print(f"Lỗi Dashboard Batch: {error}")
         raise HTTPException(
             status_code=500,
             detail="Không thể lấy dữ liệu Dashboard."
@@ -302,3 +322,14 @@ def export_batch(batch_id: str):
             status_code=500,
             detail="Không thể xuất file CSV."
         )
+
+# KIỂM TRA THỨ TỰ ĐĂNG KÝ ROUTE
+print("\n===== DASHBOARD ROUTES =====")
+
+for route in app.routes:
+    path = getattr(route, "path", "")
+
+    if path.startswith("/dashboard"):
+        print(path, "->", getattr(route, "name", ""))
+        
+print("============================\n")
