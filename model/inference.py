@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 from transformers import AutoModel, AutoTokenizer
 
+
 MODEL_NAME = "vinai/phobert-base-v2"
 NUM_ASPECTS = 12
 MAX_LENGTH = 256
@@ -30,6 +31,10 @@ LABEL_MAP = {
     3: "Neutral"
 }
 
+
+# =====================================================
+# 1. KIEN TRUC MO HINH PHOBERT ABSA V8
+# =====================================================
 
 class PhoBERT_ABSA_V8(nn.Module):
 
@@ -68,6 +73,10 @@ class PhoBERT_ABSA_V8(nn.Module):
         return detection, sentiment
 
 
+# =====================================================
+# 2. KHOI TAO VA NAP MO HINH V8 EPOCH 24
+# =====================================================
+
 class ABSAInference:
 
     def __init__(self, model_dir, device=None):
@@ -80,28 +89,50 @@ class ABSAInference:
             )
         )
 
+        # Duong dan den bo mo hinh V8 Epoch 24
+        integration_dir = os.path.join(
+            os.path.dirname(os.path.abspath(model_dir)),
+            "PHOBERT_V8_UI_INTEGRATION"
+        )
+
+        # Duong dan tokenizer moi
         tokenizer_dir = os.path.join(
-            model_dir, "tokenizer"
+            integration_dir, "tokenizer"
         )
 
+        # Duong dan checkpoint tot nhat Epoch 24
         checkpoint_path = os.path.join(
-            model_dir, "best_model_v8_from_v7.pt"
+            integration_dir, "model", "best_model.pt"
         )
 
-        assert os.path.isdir(tokenizer_dir), (
-            "Không tìm thấy thư mục tokenizer!"
-        )
+        # Kiem tra file va thu muc
+        if not os.path.isdir(tokenizer_dir):
+            raise FileNotFoundError(
+                f"Không tìm thấy thư mục tokenizer: {tokenizer_dir}"
+            )
 
-        assert os.path.isfile(checkpoint_path), (
-            "Không tìm thấy checkpoint V8!"
-        )
+        if not os.path.isfile(checkpoint_path):
+            raise FileNotFoundError(
+                f"Không tìm thấy checkpoint: {checkpoint_path}"
+            )
 
+        print("=" * 60)
+        print("LOADING PHOBERT ABSA V8 - EPOCH 24")
+        print(f"Checkpoint: {checkpoint_path}")
+        print(f"Tokenizer: {tokenizer_dir}")
+        print(f"Device: {self.device}")
+        print("Validation Macro-F1: 0.589550")
+        print("=" * 60)
+
+        # Nap tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(
             tokenizer_dir
         )
 
+        # Khoi tao kien truc mo hinh
         self.model = PhoBERT_ABSA_V8()
 
+        # Nap trong so da huan luyen
         state_dict = torch.load(
             checkpoint_path,
             map_location="cpu",
@@ -116,12 +147,19 @@ class ABSAInference:
         self.model.to(self.device)
         self.model.eval()
 
+        print("MODEL LOADED SUCCESSFULLY!")
+
+
+    # =================================================
+    # 3. DU DOAN CAM XUC CHO 12 KHIA CANH
+    # =================================================
+
     def predict(self, text):
 
         if not isinstance(text, str) or not text.strip():
             raise ValueError("Review không được để trống.")
 
-        # Giữ cách tokenization giống quá trình huấn luyện V8
+        # Tokenization giong qua trinh huan luyen
         encoded = self.tokenizer(
             text,
             padding="max_length",
@@ -131,8 +169,12 @@ class ABSAInference:
         )
 
         input_ids = encoded["input_ids"].to(self.device)
-        attention_mask = encoded["attention_mask"].to(self.device)
 
+        attention_mask = encoded["attention_mask"].to(
+            self.device
+        )
+
+        # Du doan, khong cap nhat trong so
         with torch.inference_mode():
 
             logits_det, logits_sent = self.model(
@@ -154,12 +196,15 @@ class ABSAInference:
 
         results = []
 
+        # Tra ve day du 12 khia canh
         for i, aspect in enumerate(ASPECTS):
 
             label_id = int(predictions[0, i].item())
 
             if label_id == 0:
-                confidence = float(prob_det[0, i, 0].item())
+                confidence = float(
+                    prob_det[0, i, 0].item()
+                )
             else:
                 confidence = float(
                     prob_det[0, i, 1].item()

@@ -1,0 +1,44 @@
+{
+  "model_name": "PhoBERT-ABSA V8",
+  "base_model": "vinai/phobert-base-v2",
+  "architecture": "two_head_detection_sentiment",
+  "best_epoch": 24,
+  "validation_macro_f1": 0.58955,
+  "max_length": 256,
+  "num_aspects": 12,
+  "aspects": [
+    "ambience#general",
+    "drinks#prices",
+    "drinks#quality",
+    "drinks#style&options",
+    "food#prices",
+    "food#quality",
+    "food#style&options",
+    "location#general",
+    "restaurant#general",
+    "restaurant#miscellaneous",
+    "restaurant#prices",
+    "service#general"
+  ],
+  "display_names": {
+    "food#quality": "Chất lượng món ăn",
+    "food#prices": "Giá món ăn",
+    "food#style&options": "Phong cách chế biến và sự đa dạng món ăn",
+    "drinks#quality": "Chất lượng đồ uống",
+    "drinks#prices": "Giá đồ uống",
+    "drinks#style&options": "Phong cách chế biến và sự đa dạng đồ uống",
+    "restaurant#general": "Đánh giá chung",
+    "restaurant#prices": "Mức giá chung",
+    "restaurant#miscellaneous": "Các yếu tố khác",
+    "service#general": "Chất lượng phục vụ",
+    "ambience#general": "Không gian",
+    "location#general": "Vị trí nhà hàng"
+  },
+  "sentiment_labels": {
+    "0": "Không đề cập",
+    "1": "Tích cực",
+    "2": "Tiêu cực",
+    "3": "Trung lập"
+  },
+  "confidence_method": "Absent: P(detection=absent); Present: P(detection=present) * P(sentiment=predicted | present)"
+}

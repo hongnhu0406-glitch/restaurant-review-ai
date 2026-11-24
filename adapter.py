@@ -8,7 +8,7 @@ API_BASE_URL = os.environ.get(
     "http://127.0.0.1:8000"
 ).rstrip("/")
 
-TIMEOUT = 15
+TIMEOUT = 120
 
 # Các cột kết quả mà Backend trả về
 RESULT_COLUMNS = [
