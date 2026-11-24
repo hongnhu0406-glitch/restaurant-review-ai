@@ -99,6 +99,7 @@ if __name__ == "__main__":
 
     streamlit_env = os.environ.copy()
     streamlit_env["API_BASE_URL"] = backend_url
+    streamlit_env["RESTAURANT_API_URL"] = backend_url
     streamlit_env["PYTHONPATH"] = str(ROOT) + os.pathsep + streamlit_env.get("PYTHONPATH", "")
     streamlit_env["PYTHONUTF8"] = "1"
     streamlit_env["PYTHONIOENCODING"] = "utf-8"
